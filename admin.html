@@ -2,117 +2,173 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Real-time Sync</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Real-time Sync</title>
     <style>
-        :root { --blue: #4a76c5; }
-        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input, button { padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ddd; }
-        .btn-sync { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
+        :root { --primary-blue: #4a76c5; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 320px; text-align: center; }
+        .login-box input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-login { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        #adminPanel { display: none; width: 95%; max-width: 900px; background: white; padding: 25px; border-radius: 15px; margin: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        input[type="text"] { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        
+        .status-bar { padding: 10px; margin-bottom: 15px; border-radius: 8px; font-weight: bold; text-align: center; display: none; }
+        .loading { background: #fff3cd; color: #856404; display: block; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
-        .loading { display: none; color: orange; font-weight: bold; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #333; }
+        
+        .btn-action { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-save { background: #28a745; width: 100%; grid-column: span 2; }
+        .btn-delete { background: #dc3545; font-size: 11px; }
+        .btn-logout { background: #6c757d; float: right; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div id="loginArea" style="text-align:center; margin-top: 100px;">
-    <h2>ADMIN LOGIN</h2>
-    <input type="password" id="passIn" placeholder="Password"><br>
-    <button onclick="cekLogin()" class="btn-sync">MASUK</button>
-</div>
-
-<div id="adminPanel" class="container" style="display:none;">
-    <h2>PENGELOLAAN DATA REAL-TIME</h2>
-    <p id="status" class="loading">Sedang Sinkronisasi...</p>
-    
-    <div style="background: #f9f9f9; padding: 15px; border-radius: 10px;">
-        <input type="text" id="nisn" placeholder="NISN">
-        <input type="text" id="nama" placeholder="Nama">
-        <input type="text" id="kelas" placeholder="Kelas">
-        <input type="text" id="nilai" placeholder="MTK:90, IPA:80" style="width: 100%;">
-        <button onclick="tambahData()" class="btn-sync" style="width: 100%; margin-top: 10px;">TAMBAH & SINKRON KE GOOGLE SHEETS</button>
+    <div id="loginArea" class="login-box">
+        <h2 style="color: var(--primary-blue)">ADMIN LOGIN</h2>
+        <input type="password" id="passIn" placeholder="Masukkan Password (muis1234)">
+        <button class="btn-login" onclick="cekLogin()">MASUK</button>
     </div>
 
-    <table id="tabelSiswa">
-        <thead>
-            <tr><th>NISN</th><th>Nama</th><th>Kelas</th><th>Nilai</th><th>Aksi</th></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</div>
+    <div id="adminPanel">
+        <button class="btn-action btn-logout" onclick="location.reload()">LOGOUT</button>
+        <h2 style="color: var(--primary-blue);">PENGELOLAAN DATA REAL-TIME</h2>
+        
+        <div id="statusBar" class="status-bar">Sedang menyelaraskan data...</div>
 
-<script>
-    const API_URL = 'TEMPEL_URL_WEB_APP_ANDA_DISINI';
-    let localData = [];
+        <div class="form-grid">
+            <input type="text" id="nisn" placeholder="NISN Siswa">
+            <input type="text" id="nama" placeholder="Nama Lengkap">
+            <input type="text" id="kelas" placeholder="Kelas">
+            <input type="text" id="nilai" placeholder="Nilai (Contoh: MTK:90, IPA:85)">
+            <button onclick="tambahData()" class="btn-action btn-save">SIMPAN & SINKRON KE GOOGLE SHEETS</button>
+        </div>
 
-    function cekLogin() {
-        if(document.getElementById('passIn').value === "muis1234") {
-            document.getElementById('loginArea').style.display = 'none';
-            document.getElementById('adminPanel').style.display = 'block';
-            muatDataDariSheets();
-        } else { alert("Salah!"); }
-    }
-
-    // AMBIL DATA DARI SHEETS SAAT BUKA ADMIN
-    async function muatDataDariSheets() {
-        showLoading(true);
-        const response = await fetch(API_URL);
-        const data = await response.json();
-        localData = data;
-        renderTabel();
-        showLoading(false);
-    }
-
-    function renderTabel() {
-        const tbody = document.querySelector('#tabelSiswa tbody');
-        tbody.innerHTML = '';
-        // Mulai dari index 1 untuk melewati header Sheets
-        for(let i = 1; i < localData.length; i++) {
-            tbody.innerHTML += `
+        <table id="tabelSiswa">
+            <thead>
                 <tr>
-                    <td>${localData[i][0]}</td>
-                    <td>${localData[i][1]}</td>
-                    <td>${localData[i][2]}</td>
-                    <td>${localData[i][3]}</td>
-                    <td><button onclick="hapusData(${i})" style="background:red; color:white; border:none; padding:5px; border-radius:3px; cursor:pointer;">Hapus</button></td>
-                </tr>`;
+                    <th>NISN</th>
+                    <th>Nama</th>
+                    <th>Kelas</th>
+                    <th>Daftar Nilai</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // URL Web App Google Apps Script Anda
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxj0ki5npOCtmGjZkL-0BgQf-ZarZYqsyXiYHJ2PeLND_o0xF7m4tdkQCXnfjk3WUUD1w/exec';
+        let localData = [];
+
+        function cekLogin() {
+            const pass = document.getElementById('passIn').value;
+            if(pass === "muis1234") {
+                document.getElementById('loginArea').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                muatDataDariSheets();
+            } else {
+                alert("Password Salah!");
+            }
         }
-    }
 
-    async function tambahData() {
-        const n = [
-            document.getElementById('nisn').value,
-            document.getElementById('nama').value,
-            document.getElementById('kelas').value,
-            document.getElementById('nilai').value
-        ];
-        localData.push(n);
-        await kirimKeSheets();
-    }
-
-    async function hapusData(index) {
-        if(confirm("Hapus data ini?")) {
-            localData.splice(index, 1);
-            await kirimKeSheets();
+        // 1. Ambil Data dari Google Sheets
+        async function muatDataDariSheets() {
+            toggleLoading(true, "Memuat data dari Google Sheets...");
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                localData = data;
+                renderTabel();
+                toggleLoading(false);
+            } catch (err) {
+                alert("Gagal memuat data. Periksa koneksi atau Deployment Apps Script.");
+                toggleLoading(false);
+            }
         }
-    }
 
-    // KIRIM DATA KEMBALI KE GOOGLE SHEETS (SINKRONISASI)
-    async function kirimKeSheets() {
-        showLoading(true);
-        await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify(localData)
-        });
-        renderTabel();
-        showLoading(false);
-        alert("Data Tersinkronisasi ke Google Sheets!");
-    }
+        // 2. Tampilkan Data ke Tabel
+        function renderTabel() {
+            const tbody = document.querySelector('#tabelSiswa tbody');
+            tbody.innerHTML = '';
+            // Mulai dari baris ke-2 (index 1) untuk melewati Header Google Sheets
+            for (let i = 1; i < localData.length; i++) {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>${localData[i][0]}</b></td>
+                        <td>${localData[i][1]}</td>
+                        <td>${localData[i][2]}</td>
+                        <td>${localData[i][3]}</td>
+                        <td>
+                            <button class="btn-action btn-delete" onclick="hapusData(${i})">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
 
-    function showLoading(isLoad) {
-        document.getElementById('status').style.display = isLoad ? 'block' : 'none';
-    }
-</script>
+        // 3. Tambah Data Baru
+        async function tambahData() {
+            const nisn = document.getElementById('nisn').value;
+            const nama = document.getElementById('nama').value;
+            const kelas = document.getElementById('kelas').value;
+            const nilai = document.getElementById('nilai').value;
+
+            if(!nisn || !nama) return alert("NISN dan Nama harus diisi!");
+
+            const barisBaru = [nisn, nama, kelas, nilai];
+            localData.push(barisBaru);
+            
+            await sinkronKeSheets();
+            
+            // Bersihkan input
+            document.getElementById('nisn').value = "";
+            document.getElementById('nama').value = "";
+        }
+
+        // 4. Hapus Data
+        async function hapusData(index) {
+            if(confirm("Apakah Anda yakin ingin menghapus data ini?")) {
+                localData.splice(index, 1);
+                await sinkronKeSheets();
+            }
+        }
+
+        // 5. Kirim data kembali ke Google Sheets (Update All)
+        async function sinkronKeSheets() {
+            toggleLoading(true, "Sedang mengirim data ke Google Sheets...");
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Penting untuk Apps Script
+                    body: JSON.stringify(localData)
+                });
+                
+                // Karena no-cors tidak memberi respon, kita asumsikan sukses & update tampilan lokal
+                renderTabel();
+                alert("Data berhasil tersinkronisasi!");
+            } catch (err) {
+                alert("Terjadi kesalahan saat sinkronisasi.");
+            }
+            toggleLoading(false);
+        }
+
+        function toggleLoading(show, pesan = "") {
+            const bar = document.getElementById('statusBar');
+            bar.innerText = pesan;
+            bar.style.display = show ? 'block' : 'none';
+            bar.className = show ? 'status-bar loading' : 'status-bar';
+        }
+    </script>
 </body>
 </html>
