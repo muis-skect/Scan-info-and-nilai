@@ -8,14 +8,30 @@
     <style>
         :root { --primary-blue: #4a76c5; --yellow-text: #f0c419; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #e5e5e5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .app-card { width: 90%; max-width: 380px; background: var(--primary-blue); border-radius: 45px; padding: 40px 20px; text-align: center; color: white; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+        
+        .app-card { 
+            width: 90%; max-width: 380px; background: var(--primary-blue); border-radius: 45px; 
+            padding: 40px 20px; text-align: center; color: white; box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+
         .logo-img { width: 80px; height: auto; margin-bottom: 10px; }
-        .main-title { font-size: 2.4rem; font-weight: 900; color: var(--yellow-text); margin-bottom: 15px; }
-        #reader { width: 260px; height: 260px; background: white; margin: 0 auto; border-radius: 35px; overflow: hidden; }
+        .main-title { font-size: 2.4rem; font-weight: 900; color: var(--yellow-text); margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .instruction { font-size: 1.1rem; font-weight: 600; line-height: 1.3; margin-bottom: 30px; }
+        
+        #reader { width: 260px; height: 260px; background: white; margin: 0 auto; border-radius: 35px; overflow: hidden; border: none !important; }
+
+        .motivation { font-size: 1rem; font-weight: 700; margin-top: 40px; line-height: 1.5; text-transform: uppercase; }
+        .footer-note { font-size: 0.7rem; margin-top: 25px; opacity: 0.7; }
+
+        /* Modal Hasil */
         .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; }
-        .modal-box { background: white; color: #333; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; }
-        .nilai-container { background: #f9f9f9; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: left; }
-        .btn-tutup { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; margin-top: 15px; font-weight: bold; }
+        .modal-box { background: white; color: #333; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+        
+        .greeting-text { font-size: 1.2rem; font-weight: bold; color: var(--primary-blue); margin-bottom: 5px; text-transform: capitalize; }
+        .sub-greeting { font-size: 0.9rem; color: #666; margin-bottom: 15px; }
+        
+        .nilai-container { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-top: 10px; text-align: left; border: 1px solid #eee; }
+        .btn-tutup { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; margin-top: 15px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -23,28 +39,40 @@
     <div class="app-card">
         <img src="logo.png" alt="Logo" class="logo-img">
         <div class="main-title">CEK NILAI-KU</div>
-        <p>Silakan Scan Barcode NISN Anda</p>
+        <div class="instruction">SCAN BARCODEMU<br>DISINI YA..</div>
+
         <div id="reader"></div>
-        <div style="font-size: 0.7rem; margin-top: 25px; opacity: 0.7;">@COPY BY ABDUL MUIS</div>
+
+        <div class="motivation">
+            TINGKATKAN GAYA<br>BELAJARMU UNTUK<br>MENINGKATKAN NILAIMU
+        </div>
+        <div class="footer-note">@COPY BY ABDUL MUIS</div>
     </div>
 
     <div id="modalSiswa" class="modal-overlay">
         <div class="modal-box">
-            <h3 id="res-nama">Nama Siswa</h3>
-            <p><strong>NISN:</strong> <span id="res-nisn"></span> | <strong>Kelas:</strong> <span id="res-kelas"></span></p>
-            <div class="nilai-container" id="res-nilai"></div>
-            <button class="btn-tutup" onclick="closeModal()">TUTUP</button>
+            <div id="greeting" class="greeting-text">Selamat Pagi!</div>
+            <div id="res-nama" style="font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;">Nama Siswa</div>
+            
+            <div style="text-align: left; font-size: 0.9rem; border-top: 1px solid #eee; padding-top: 10px;">
+                <strong>NISN:</strong> <span id="res-nisn"></span><br>
+                <strong>Kelas:</strong> <span id="res-kelas"></span>
+            </div>
+
+            <div class="nilai-container" id="res-nilai-list"></div>
+            
+            <button class="btn-tutup" onclick="closeModal()">TUTUP & SCAN LAGI</button>
         </div>
     </div>
 
     <script>
-        // MASUKKAN SHEET ID ANDA DI SINI
+        // Database dari Google Sheets Anda
         const SHEET_ID = '1dwy-d6Vuqa5AfNfiB67FQMlR2Gw87F1Bi4ZGAJw-NnM';
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
         let dataSiswaGlobal = [];
 
-        // Ambil data dari Google Sheets saat halaman dibuka
+        // Load data saat web dibuka
         fetch(SHEET_URL)
             .then(res => res.text())
             .then(data => {
@@ -54,33 +82,46 @@
                     nisn: r.c[0]?.v.toString(),
                     nama: r.c[1]?.v,
                     kelas: r.c[2]?.v,
-                    nilai: r.c[3]?.v
+                    nilai: r.c[3]?.v || ""
                 }));
-                console.log("Data Berhasil Dimuat");
             });
+
+        function getGreeting() {
+            const hour = new Date().getHours();
+            if (hour >= 5 && hour < 11) return "Selamat Pagi";
+            if (hour >= 11 && hour < 15) return "Selamat Siang";
+            if (hour >= 15 && hour < 18) return "Selamat Sore";
+            return "Selamat Malam";
+        }
 
         function onScanSuccess(decodedText) {
             const siswa = dataSiswaGlobal.find(s => s.nisn === decodedText);
+
             if (siswa) {
+                const salam = getGreeting();
+                document.getElementById('greeting').innerText = `${salam},`;
                 document.getElementById('res-nama').innerText = siswa.nama;
                 document.getElementById('res-nisn').innerText = siswa.nisn;
                 document.getElementById('res-kelas').innerText = siswa.kelas;
-                
-                // Menampilkan daftar nilai
-                let listHtml = "";
+
+                // Memproses daftar nilai
+                let listHtml = "<strong>DAFTAR NILAI:</strong><br>";
                 const nilaiArray = siswa.nilai.split(',');
                 nilaiArray.forEach((n, i) => {
-                    listHtml += `<div>${i+1}. ${n.trim()}</div>`;
+                    listHtml += `<div style="padding: 5px 0; border-bottom: 1px solid #ddd;">${i+1}. ${n.trim()}</div>`;
                 });
-                document.getElementById('res-nilai').innerHTML = listHtml;
+                
+                document.getElementById('res-nilai-list').innerHTML = listHtml;
                 document.getElementById('modalSiswa').style.display = 'flex';
             } else {
-                alert("NISN tidak ditemukan di database online.");
+                alert("Maaf, NISN tidak ditemukan di database online.");
             }
         }
 
         function closeModal() { document.getElementById('modalSiswa').style.display = 'none'; }
-        new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 }).render(onScanSuccess);
+
+        let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 });
+        scanner.render(onScanSuccess);
     </script>
 </body>
 </html>
