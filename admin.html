@@ -2,27 +2,28 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Cek Nilai-Ku</title>
+    <title>Admin - Pengolahan Data</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --primary-blue: #4a76c5; }
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 320px; text-align: center; }
         .login-box input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .btn-login { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        
+
         #adminPanel { display: none; width: 95%; max-width: 1000px; background: white; padding: 25px; border-radius: 15px; margin: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        textarea { grid-column: span 2; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
-        input[type="text"] { padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
-        .btn-group { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        input[type="text"], textarea { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+        textarea { grid-column: span 2; }
+        .btn-group { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; }
         button { padding: 10px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
-        .btn-save { background: #28a745; }
+        .btn-save { background: #28a745; width: 100%; margin-top: 10px; }
         .btn-excel { background: #1d6f42; }
         .btn-logout { background: #dc3545; float: right; }
-        table { width: 100%; border-collapse: collapse; margin-top: 25px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background: #f8f9fa; }
     </style>
 </head>
 <body>
@@ -36,22 +37,29 @@
 
     <div id="adminPanel">
         <button class="btn-logout" onclick="logout()">LOGOUT</button>
-        <h2 style="color: var(--primary-blue);">PENGOLAHAN DATA SISWA</h2>
+        <h2 style="color: var(--primary-blue); margin-top: 0;">PENGOLAHAN DATA SISWA</h2>
         
         <form id="formAdmin">
             <div class="form-group">
-                <input type="text" id="nisn" placeholder="NISN (Untuk Barcode)" required>
-                <input type="text" id="nama" placeholder="Nama Siswa" required>
+                <input type="text" id="nisn" placeholder="NISN (Barcode)" required>
+                <input type="text" id="nama" placeholder="Nama Lengkap Siswa" required>
                 <input type="text" id="kelas" placeholder="Kelas" required>
-                <textarea id="materiNilai" placeholder="Contoh: MTK:90, IPA:80" rows="2" required></textarea>
+                
+                <div style="grid-column: span 2; background: #fefefe; padding: 15px; border: 1px dashed #aaa; border-radius: 10px;">
+                    <label style="font-size: 11px; font-weight: bold;">INPUT NILAI CEPAT:</label>
+                    <input type="text" id="templateMateri" placeholder="Daftar Mapel (Contoh: MTK, IPA, B.Indo)" style="width:70%; margin-bottom:10px;">
+                    <button type="button" onclick="generateTemplate()" style="background:#6c757d; font-size:10px;">Buat Template</button>
+                    <textarea id="materiNilai" placeholder="Format: MTK:80, IPA:90" rows="3" required></textarea>
+                </div>
             </div>
-            <button type="submit" class="btn-save" style="margin-top: 10px;">SIMPAN MANUAL</button>
+            <button type="submit" class="btn-save">SIMPAN DATA KE DATABASE</button>
         </form>
 
         <div class="btn-group">
             <input type="file" id="excelInput" style="display:none" accept=".xlsx, .xls" onchange="imporExcel(event)">
-            <button onclick="document.getElementById('excelInput').click()" class="btn-excel">IMPOR DARI EXCEL (.xlsx)</button>
-            <button onclick="eksporJSON()" style="background:#007bff">BACKUP (JSON)</button>
+            <button onclick="document.getElementById('excelInput').click()" class="btn-excel">IMPORT DARI EXCEL (.xlsx)</button>
+            <button onclick="eksporJSON()" style="background:#007bff">BACKUP DATA (JSON)</button>
+            <button onclick="resetData()" style="background:orange">HAPUS SEMUA DATA</button>
         </div>
 
         <table id="tabelSiswa">
@@ -83,44 +91,20 @@
 
         function logout() { location.reload(); }
 
+        function generateTemplate() {
+            const val = document.getElementById('templateMateri').value;
+            if(!val) return alert("Isi daftar mapel!");
+            const temp = val.split(',').map(m => `${m.trim()}:0`).join(', ');
+            document.getElementById('materiNilai').value = temp;
+        }
+
         function updateTabel() {
             const data = JSON.parse(localStorage.getItem('db_siswa')) || [];
             const tbody = document.querySelector('#tabelSiswa tbody');
             tbody.innerHTML = '';
             data.forEach((s, i) => {
-                tbody.innerHTML += `<tr><td>${s.nisn}</td><td>${s.nama}</td><td>${s.kelas}</td><td>${s.nilaiArr.length} Mapel</td><td><button onclick="hapusSiswa(${i})" style="background:#dc3545; padding:5px">Hapus</button></td></tr>`;
+                tbody.innerHTML += `<tr><td>${s.nisn}</td><td>${s.nama}</td><td>${s.kelas}</td><td>${s.nilaiArr.length} Mapel</td><td><button onclick="hapusSiswa(${i})" style="background:#dc3545; padding:5px 10px; font-size:10px">Hapus</button></td></tr>`;
             });
-        }
-
-        // FUNGSI IMPOR EXCEL
-        function imporExcel(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-                const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
-                jsonData.forEach(row => {
-                    const rawNilai = row.Nilai || row.NILAI || "";
-                    const arrayNilai = rawNilai.toString().split(',').map(item => {
-                        const p = item.split(':');
-                        return { materi: p[0].trim(), skor: p[1] ? p[1].trim() : '0' };
-                    });
-                    db.push({
-                        nisn: row.NISN.toString(),
-                        nama: row.Nama || row.NAMA,
-                        kelas: row.Kelas || row.KELAS,
-                        nilaiArr: arrayNilai
-                    });
-                });
-                localStorage.setItem('db_siswa', JSON.stringify(db));
-                updateTabel();
-                alert("Sukses Impor " + jsonData.length + " Siswa");
-            };
-            reader.readAsArrayBuffer(file);
         }
 
         document.getElementById('formAdmin').onsubmit = (e) => {
@@ -138,14 +122,42 @@
             });
             localStorage.setItem('db_siswa', JSON.stringify(db));
             updateTabel();
-            e.target.reset();
+            document.getElementById('nisn').value = "";
+            document.getElementById('nama').value = "";
+            alert("Data Berhasil Disimpan!");
         };
 
+        function imporExcel(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(sheet);
+                const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
+                jsonData.forEach(row => {
+                    const rawNilai = row.Nilai || row.NILAI || "";
+                    const arrayNilai = rawNilai.toString().split(',').map(item => {
+                        const p = item.split(':');
+                        return { materi: p[0].trim(), skor: p[1] ? p[1].trim() : '0' };
+                    });
+                    db.push({ nisn: row.NISN.toString(), nama: row.Nama || row.NAMA, kelas: row.Kelas || row.KELAS, nilaiArr: arrayNilai });
+                });
+                localStorage.setItem('db_siswa', JSON.stringify(db));
+                updateTabel();
+                alert("Berhasil mengimpor " + jsonData.length + " data!");
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
         function hapusSiswa(i) {
-            const db = JSON.parse(localStorage.getItem('db_siswa'));
-            db.splice(i, 1);
-            localStorage.setItem('db_siswa', JSON.stringify(db));
-            updateTabel();
+            if(confirm("Hapus siswa ini?")) {
+                const db = JSON.parse(localStorage.getItem('db_siswa'));
+                db.splice(i, 1);
+                localStorage.setItem('db_siswa', JSON.stringify(db));
+                updateTabel();
+            }
         }
 
         function eksporJSON() {
@@ -153,8 +165,15 @@
             const blob = new Blob([data], {type: "application/json"});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'backup_siswa.json';
+            a.download = 'backup_data_siswa.json';
             a.click();
+        }
+
+        function resetData() {
+            if(confirm("PERINGATAN: Semua data akan dihapus permanen!")) {
+                localStorage.removeItem('db_siswa');
+                updateTabel();
+            }
         }
     </script>
 </body>
