@@ -3,52 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner NISN - Dashboard</title>
+    <title>CEK NILAI-KU</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; }
-        #reader { width: 100%; max-width: 500px; margin: auto; background: white; padding: 10px; border-radius: 8px; }
-        .result-card { margin-top: 20px; padding: 20px; background: white; display: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: left; max-width: 500px; margin-left: auto; margin-right: auto; }
-        .nav { margin-bottom: 20px; }
+        :root { --primary-blue: #4a76c5; --yellow-text: #f0c419; }
+        body { margin: 0; font-family: 'Arial', sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        /* Container Utama sesuai Gambar */
+        .app-container { 
+            width: 350px; background: var(--primary-blue); border-radius: 40px; 
+            padding: 40px 20px; text-align: center; color: white; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .logo { font-weight: bold; font-size: 1.2rem; margin-bottom: 10px; color: black; }
+        .title { font-size: 2.2rem; font-weight: bold; color: var(--yellow-text); text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin-bottom: 20px; }
+        .sub-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 30px; }
+        
+        /* Frame Kamera */
+        #reader { 
+            width: 250px; height: 250px; background: white; margin: 0 auto; 
+            border-radius: 40px; overflow: hidden; border: none !important;
+        }
+
+        .footer-text { font-size: 0.9rem; font-weight: bold; margin-top: 40px; line-height: 1.4; text-transform: uppercase; }
+        .copyright { font-size: 0.6rem; margin-top: 20px; opacity: 0.8; }
+
+        /* Modal Hasil */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: white; color: #333; padding: 25px; border-radius: 20px; width: 85%; max-width: 400px; text-align: left; }
+        .modal-content h2 { border-bottom: 2px solid var(--primary-blue); padding-bottom: 10px; color: var(--primary-blue); }
+        .btn-close { background: var(--primary-blue); color: white; border: none; padding: 10px; width: 100%; border-radius: 10px; margin-top: 15px; cursor: pointer; }
+        
+        /* Sembunyikan pesan sukses dari library */
+        #reader__status_span { display: none; }
+        video { object-fit: cover !important; }
     </style>
 </head>
 <body>
 
-    <div class="nav">
-        <strong>DASHBOARD SCANNER</strong> | <a href="data.html">Pengolahan Data</a>
+    <div class="app-container">
+        <div class="logo">LOGO</div>
+        <div class="title">CEK NILAI-KU</div>
+        <div class="sub-title">SCAN BARCODEMU<br>DISINI YA..</div>
+
+        <div id="reader"></div>
+
+        <div class="footer-text">
+            TINGKATKAN GAYA<br>BELAJARMU UNTUK<br>MENINGKATKAN NILAIMU
+        </div>
+        <div class="copyright">@COPY BY ABDUL MUIS</div>
+        <div style="margin-top: 10px;"><a href="data.html" style="color: white; font-size: 10px;">Login Admin</a></div>
     </div>
 
-    <div id="reader"></div>
-
-    <div id="result" class="result-card">
-        <h3>Data Siswa Found:</h3>
-        <p><strong>NISN:</strong> <span id="res-nisn"></span></p>
-        <p><strong>Nama:</strong> <span id="res-nama"></span></p>
-        <p><strong>Kelas:</strong> <span id="res-kelas"></span></p>
-        <p><strong>Mapel:</strong> <span id="res-mapel"></span></p>
-        <p><strong>Nilai:</strong> <span id="res-nilai"></span></p>
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <h2>Data Siswa</h2>
+            <p><strong>NISN:</strong> <span id="res-nisn"></span></p>
+            <p><strong>Nama:</strong> <span id="res-nama"></span></p>
+            <p><strong>Kelas:</strong> <span id="res-kelas"></span></p>
+            <hr>
+            <strong>DAFTAR NILAI:</strong>
+            <div id="res-materi-list" style="margin-top: 10px; font-size: 0.9rem;"></div>
+            <button class="btn-close" onclick="closeModal()">TUTUP</button>
+        </div>
     </div>
 
     <script>
-        function onScanSuccess(decodedText, decodedResult) {
-            // Ambil data dari LocalStorage
+        function onScanSuccess(decodedText) {
             const storedData = JSON.parse(localStorage.getItem('dataSiswa')) || [];
             const siswa = storedData.find(s => s.nisn === decodedText);
 
             if (siswa) {
-                document.getElementById('result').style.display = 'block';
                 document.getElementById('res-nisn').innerText = siswa.nisn;
                 document.getElementById('res-nama').innerText = siswa.nama;
                 document.getElementById('res-kelas').innerText = siswa.kelas;
-                document.getElementById('res-mapel').innerText = siswa.mapel;
-                document.getElementById('res-nilai').innerText = siswa.nilai;
                 
-                // Berhenti scan sebentar agar tidak terus menerus terbaca
-                alert("Data Ditemukan!");
+                // Menampilkan daftar materi & nilai
+                let listHtml = "";
+                siswa.nilaiList.forEach((n, index) => {
+                    listHtml += `<div>${index + 1}. ${n.materi}: <b>${n.skor}</b></div>`;
+                });
+                document.getElementById('res-materi-list').innerHTML = listHtml;
+
+                document.getElementById('resultModal').style.display = 'flex';
             } else {
-                alert("Barcode: " + decodedText + " - Data NISN tidak ditemukan di database.");
+                alert("Data NISN " + decodedText + " tidak terdaftar!");
             }
         }
+
+        function closeModal() { document.getElementById('resultModal').style.display = 'none'; }
 
         let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
         html5QrcodeScanner.render(onScanSuccess);
