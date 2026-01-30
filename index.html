@@ -18,7 +18,6 @@
         .main-title { font-size: 2.4rem; font-weight: 900; color: var(--yellow-text); margin-bottom: 15px; }
         .instruction { font-size: 1.1rem; font-weight: 600; line-height: 1.3; margin-bottom: 30px; }
         
-        /* Area Scanner */
         #reader { 
             width: 260px; height: 260px; background: white; margin: 0 auto; 
             border-radius: 35px; overflow: hidden; border: none !important;
@@ -27,12 +26,12 @@
         .motivation { font-size: 1rem; font-weight: 700; margin-top: 40px; line-height: 1.5; text-transform: uppercase; }
         .footer-note { font-size: 0.7rem; margin-top: 25px; opacity: 0.7; }
 
-        /* Pop-up Hasil Scan */
+        /* Modal Hasil */
         .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; }
-        .modal-box { background: white; color: #333; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; position: relative; }
+        .modal-box { background: white; color: #333; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .modal-box h3 { color: var(--primary-blue); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
         .data-row { margin: 8px 0; font-size: 0.95rem; }
-        .nilai-container { background: #f9f9f9; padding: 10px; border-radius: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
+        .nilai-container { background: #f9f9f9; padding: 10px; border-radius: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; text-align: left; }
         .btn-tutup { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; margin-top: 15px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
@@ -53,12 +52,12 @@
 
     <div id="modalSiswa" class="modal-overlay">
         <div class="modal-box">
-            <h3>Hasil Pencarian</h3>
+            <h3>Data Nilai Siswa</h3>
             <div class="data-row"><strong>NISN:</strong> <span id="view-nisn"></span></div>
             <div class="data-row"><strong>Nama:</strong> <span id="view-nama"></span></div>
             <div class="data-row"><strong>Kelas:</strong> <span id="view-kelas"></span></div>
             <div class="nilai-container" id="view-nilai-list"></div>
-            <button class="btn-tutup" onclick="closeModal()">SCAN LAGI</button>
+            <button class="btn-tutup" onclick="closeModal()">TUTUP & SCAN LAGI</button>
         </div>
     </div>
 
@@ -72,21 +71,20 @@
                 document.getElementById('view-nama').innerText = siswa.nama;
                 document.getElementById('view-kelas').innerText = siswa.kelas;
 
-                let htmlNilai = "<strong>Daftar Nilai:</strong><br>";
+                let htmlNilai = "";
                 siswa.nilaiArr.forEach((n, i) => {
                     htmlNilai += `<div style="border-bottom: 1px solid #ddd; padding: 5px 0;">${i+1}. ${n.materi}: <b>${n.skor}</b></div>`;
                 });
-                document.getElementById('view-nilai-list').innerHTML = htmlNilai;
+                document.getElementById('view-nilai-list').innerHTML = htmlNilai || "Belum ada data nilai.";
                 document.getElementById('modalSiswa').style.display = 'flex';
             } else {
-                alert("NISN " + decodedText + " Tidak Ditemukan!");
+                alert("Data NISN " + decodedText + " tidak ditemukan di sistem!");
             }
         }
 
         function closeModal() { document.getElementById('modalSiswa').style.display = 'none'; }
 
-        // Inisialisasi Scanner
-        let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 200 });
+        let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 });
         scanner.render(onScanSuccess);
     </script>
 </body>
