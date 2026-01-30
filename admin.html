@@ -2,34 +2,33 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Login Admin - Cek Nilai</title>
+    <title>Admin - Cek Nilai-Ku</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --primary-blue: #4a76c5; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        
-        /* Style Form Login */
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 320px; text-align: center; }
-        .login-box h2 { color: var(--primary-blue); margin-bottom: 20px; }
         .login-box input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-login { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-
-        /* Style Panel Admin (Disembunyikan di awal) */
-        #adminPanel { display: none; width: 95%; max-width: 1000px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 20px; }
+        .btn-login { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        #adminPanel { display: none; width: 95%; max-width: 1000px; background: white; padding: 25px; border-radius: 15px; margin: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
         textarea { grid-column: span 2; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
         input[type="text"] { padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
         .btn-group { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-        button { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
+        button { padding: 10px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
         .btn-save { background: #28a745; }
+        .btn-excel { background: #1d6f42; }
         .btn-logout { background: #dc3545; float: right; }
-        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 25px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #333; }
     </style>
 </head>
 <body>
 
     <div id="loginArea" class="login-box">
-        <h2>ADMIN LOGIN</h2>
+        <h2 style="color: var(--primary-blue)">ADMIN LOGIN</h2>
         <input type="text" id="userIn" placeholder="Username">
         <input type="password" id="passIn" placeholder="Password">
         <button class="btn-login" onclick="cekLogin()">MASUK</button>
@@ -41,18 +40,18 @@
         
         <form id="formAdmin">
             <div class="form-group">
-                <input type="text" id="nisn" placeholder="Nomor NISN (Barcode)" required>
-                <input type="text" id="nama" placeholder="Nama Lengkap Siswa" required>
+                <input type="text" id="nisn" placeholder="NISN (Untuk Barcode)" required>
+                <input type="text" id="nama" placeholder="Nama Siswa" required>
                 <input type="text" id="kelas" placeholder="Kelas" required>
-                <textarea id="materiNilai" placeholder="Format Nilai: Matematika:80, Fisika:75" rows="3" required></textarea>
+                <textarea id="materiNilai" placeholder="Contoh: MTK:90, IPA:80" rows="2" required></textarea>
             </div>
-            <button type="submit" class="btn-save" style="margin-top: 10px;">SIMPAN DATA</button>
+            <button type="submit" class="btn-save" style="margin-top: 10px;">SIMPAN MANUAL</button>
         </form>
 
         <div class="btn-group">
-            <button onclick="eksporData()" style="background:#007bff">BACKUP DATA (JSON)</button>
-            <button onclick="document.getElementById('fileInput').click()" style="background:#ffc107; color:black">IMPOR DATA</button>
-            <input type="file" id="fileInput" style="display:none" onchange="imporData(event)">
+            <input type="file" id="excelInput" style="display:none" accept=".xlsx, .xls" onchange="imporExcel(event)">
+            <button onclick="document.getElementById('excelInput').click()" class="btn-excel">IMPOR DARI EXCEL (.xlsx)</button>
+            <button onclick="eksporJSON()" style="background:#007bff">BACKUP (JSON)</button>
         </div>
 
         <table id="tabelSiswa">
@@ -70,96 +69,92 @@
     </div>
 
     <script>
-        // DATA KREDENSIAL
         const VALID_USER = "guruupdate";
         const VALID_PASS = "muis1234";
 
         function cekLogin() {
-            const u = document.getElementById('userIn').value;
-            const p = document.getElementById('passIn').value;
-
-            if(u === VALID_USER && p === VALID_PASS) {
+            if(document.getElementById('userIn').value === VALID_USER && document.getElementById('passIn').value === VALID_PASS) {
                 document.getElementById('loginArea').style.display = 'none';
                 document.getElementById('adminPanel').style.display = 'block';
-                document.body.style.alignItems = 'flex-start'; // Atur posisi agar scroll enak
+                document.body.style.alignItems = 'flex-start';
                 updateTabel();
-            } else {
-                alert("Username atau Password Salah!");
-            }
+            } else { alert("Login Gagal!"); }
         }
 
-        function logout() {
-            location.reload(); // Refresh halaman untuk kembali ke login
-        }
+        function logout() { location.reload(); }
 
-        // FUNGSI PENGOLAHAN DATA (Sama seperti sebelumnya)
-        const form = document.getElementById('formAdmin');
-        
         function updateTabel() {
             const data = JSON.parse(localStorage.getItem('db_siswa')) || [];
             const tbody = document.querySelector('#tabelSiswa tbody');
             tbody.innerHTML = '';
-            data.forEach((s, index) => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td><b>${s.nisn}</b></td>
-                        <td>${s.nama}</td>
-                        <td>${s.kelas}</td>
-                        <td>${s.nilaiArr.length} Item</td>
-                        <td><button onclick="hapusSiswa(${index})" style="background:#dc3545; padding:5px 10px; font-size:11px">Hapus</button></td>
-                    </tr>
-                `;
+            data.forEach((s, i) => {
+                tbody.innerHTML += `<tr><td>${s.nisn}</td><td>${s.nama}</td><td>${s.kelas}</td><td>${s.nilaiArr.length} Mapel</td><td><button onclick="hapusSiswa(${i})" style="background:#dc3545; padding:5px">Hapus</button></td></tr>`;
             });
         }
 
-        form.onsubmit = (e) => {
+        // FUNGSI IMPOR EXCEL
+        function imporExcel(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
+                jsonData.forEach(row => {
+                    const rawNilai = row.Nilai || row.NILAI || "";
+                    const arrayNilai = rawNilai.toString().split(',').map(item => {
+                        const p = item.split(':');
+                        return { materi: p[0].trim(), skor: p[1] ? p[1].trim() : '0' };
+                    });
+                    db.push({
+                        nisn: row.NISN.toString(),
+                        nama: row.Nama || row.NAMA,
+                        kelas: row.Kelas || row.KELAS,
+                        nilaiArr: arrayNilai
+                    });
+                });
+                localStorage.setItem('db_siswa', JSON.stringify(db));
+                updateTabel();
+                alert("Sukses Impor " + jsonData.length + " Siswa");
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        document.getElementById('formAdmin').onsubmit = (e) => {
             e.preventDefault();
-            const rawNilai = document.getElementById('materiNilai').value;
-            const arrayNilai = rawNilai.split(',').map(item => {
+            const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
+            const arrayNilai = document.getElementById('materiNilai').value.split(',').map(item => {
                 const p = item.split(':');
                 return { materi: p[0].trim(), skor: p[1] ? p[1].trim() : '0' };
             });
-
-            const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
             db.push({
                 nisn: document.getElementById('nisn').value,
                 nama: document.getElementById('nama').value,
                 kelas: document.getElementById('kelas').value,
                 nilaiArr: arrayNilai
             });
-
             localStorage.setItem('db_siswa', JSON.stringify(db));
-            form.reset();
             updateTabel();
-            alert("Data Berhasil Disimpan!");
+            e.target.reset();
         };
 
-        function hapusSiswa(idx) {
-            if(confirm("Hapus data ini?")) {
-                const db = JSON.parse(localStorage.getItem('db_siswa'));
-                db.splice(idx, 1);
-                localStorage.setItem('db_siswa', JSON.stringify(db));
-                updateTabel();
-            }
+        function hapusSiswa(i) {
+            const db = JSON.parse(localStorage.getItem('db_siswa'));
+            db.splice(i, 1);
+            localStorage.setItem('db_siswa', JSON.stringify(db));
+            updateTabel();
         }
 
-        function eksporData() {
+        function eksporJSON() {
             const data = localStorage.getItem('db_siswa');
             const blob = new Blob([data], {type: "application/json"});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = 'backup_siswa.json';
             a.click();
-        }
-
-        function imporData(e) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                localStorage.setItem('db_siswa', event.target.result);
-                updateTabel();
-                alert("Impor Selesai!");
-            };
-            reader.readAsText(e.target.files[0]);
         }
     </script>
 </body>
