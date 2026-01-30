@@ -3,98 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEK NILAI-KU</title>
+    <title>CEK NILAI-KU - Scan</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --primary-blue: #4a76c5; --yellow-text: #f0c419; }
-        body { margin: 0; font-family: 'Arial', sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #e5e5e5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         
-        /* Container Utama sesuai Gambar */
-        .app-container { 
-            width: 350px; background: var(--primary-blue); border-radius: 40px; 
-            padding: 40px 20px; text-align: center; color: white; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        .app-card { 
+            width: 90%; max-width: 380px; background: var(--primary-blue); border-radius: 45px; 
+            padding: 40px 20px; text-align: center; color: white; box-shadow: 0 15px 35px rgba(0,0,0,0.3);
         }
 
-        .logo { font-weight: bold; font-size: 1.2rem; margin-bottom: 10px; color: black; }
-        .title { font-size: 2.2rem; font-weight: bold; color: var(--yellow-text); text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin-bottom: 20px; }
-        .sub-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 30px; }
+        .logo-text { font-weight: 800; font-size: 1.2rem; color: #000; margin-bottom: 10px; letter-spacing: 2px; }
+        .main-title { font-size: 2.4rem; font-weight: 900; color: var(--yellow-text); margin-bottom: 15px; }
+        .instruction { font-size: 1.1rem; font-weight: 600; line-height: 1.3; margin-bottom: 30px; }
         
-        /* Frame Kamera */
+        /* Area Scanner */
         #reader { 
-            width: 250px; height: 250px; background: white; margin: 0 auto; 
-            border-radius: 40px; overflow: hidden; border: none !important;
+            width: 260px; height: 260px; background: white; margin: 0 auto; 
+            border-radius: 35px; overflow: hidden; border: none !important;
         }
 
-        .footer-text { font-size: 0.9rem; font-weight: bold; margin-top: 40px; line-height: 1.4; text-transform: uppercase; }
-        .copyright { font-size: 0.6rem; margin-top: 20px; opacity: 0.8; }
+        .motivation { font-size: 1rem; font-weight: 700; margin-top: 40px; line-height: 1.5; text-transform: uppercase; }
+        .footer-note { font-size: 0.7rem; margin-top: 25px; opacity: 0.7; }
 
-        /* Modal Hasil */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
-        .modal-content { background: white; color: #333; padding: 25px; border-radius: 20px; width: 85%; max-width: 400px; text-align: left; }
-        .modal-content h2 { border-bottom: 2px solid var(--primary-blue); padding-bottom: 10px; color: var(--primary-blue); }
-        .btn-close { background: var(--primary-blue); color: white; border: none; padding: 10px; width: 100%; border-radius: 10px; margin-top: 15px; cursor: pointer; }
-        
-        /* Sembunyikan pesan sukses dari library */
-        #reader__status_span { display: none; }
-        video { object-fit: cover !important; }
+        /* Pop-up Hasil Scan */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; }
+        .modal-box { background: white; color: #333; width: 85%; max-width: 350px; border-radius: 25px; padding: 25px; position: relative; }
+        .modal-box h3 { color: var(--primary-blue); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        .data-row { margin: 8px 0; font-size: 0.95rem; }
+        .nilai-container { background: #f9f9f9; padding: 10px; border-radius: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
+        .btn-tutup { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; margin-top: 15px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <div class="logo">LOGO</div>
-        <div class="title">CEK NILAI-KU</div>
-        <div class="sub-title">SCAN BARCODEMU<br>DISINI YA..</div>
+    <div class="app-card">
+        <div class="logo-text">LOGO</div>
+        <div class="main-title">CEK NILAI-KU</div>
+        <div class="instruction">SCAN BARCODEMU<br>DISINI YA..</div>
 
         <div id="reader"></div>
 
-        <div class="footer-text">
+        <div class="motivation">
             TINGKATKAN GAYA<br>BELAJARMU UNTUK<br>MENINGKATKAN NILAIMU
         </div>
-        <div class="copyright">@COPY BY ABDUL MUIS</div>
-        <div style="margin-top: 10px;"><a href="data.html" style="color: white; font-size: 10px;">Login Admin</a></div>
+        <div class="footer-note">@COPY BY ABDUL MUIS</div>
     </div>
 
-    <div id="resultModal" class="modal">
-        <div class="modal-content">
-            <h2>Data Siswa</h2>
-            <p><strong>NISN:</strong> <span id="res-nisn"></span></p>
-            <p><strong>Nama:</strong> <span id="res-nama"></span></p>
-            <p><strong>Kelas:</strong> <span id="res-kelas"></span></p>
-            <hr>
-            <strong>DAFTAR NILAI:</strong>
-            <div id="res-materi-list" style="margin-top: 10px; font-size: 0.9rem;"></div>
-            <button class="btn-close" onclick="closeModal()">TUTUP</button>
+    <div id="modalSiswa" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Hasil Pencarian</h3>
+            <div class="data-row"><strong>NISN:</strong> <span id="view-nisn"></span></div>
+            <div class="data-row"><strong>Nama:</strong> <span id="view-nama"></span></div>
+            <div class="data-row"><strong>Kelas:</strong> <span id="view-kelas"></span></div>
+            <div class="nilai-container" id="view-nilai-list"></div>
+            <button class="btn-tutup" onclick="closeModal()">SCAN LAGI</button>
         </div>
     </div>
 
     <script>
         function onScanSuccess(decodedText) {
-            const storedData = JSON.parse(localStorage.getItem('dataSiswa')) || [];
-            const siswa = storedData.find(s => s.nisn === decodedText);
+            const dataSiswa = JSON.parse(localStorage.getItem('db_siswa')) || [];
+            const siswa = dataSiswa.find(s => s.nisn === decodedText);
 
             if (siswa) {
-                document.getElementById('res-nisn').innerText = siswa.nisn;
-                document.getElementById('res-nama').innerText = siswa.nama;
-                document.getElementById('res-kelas').innerText = siswa.kelas;
-                
-                // Menampilkan daftar materi & nilai
-                let listHtml = "";
-                siswa.nilaiList.forEach((n, index) => {
-                    listHtml += `<div>${index + 1}. ${n.materi}: <b>${n.skor}</b></div>`;
-                });
-                document.getElementById('res-materi-list').innerHTML = listHtml;
+                document.getElementById('view-nisn').innerText = siswa.nisn;
+                document.getElementById('view-nama').innerText = siswa.nama;
+                document.getElementById('view-kelas').innerText = siswa.kelas;
 
-                document.getElementById('resultModal').style.display = 'flex';
+                let htmlNilai = "<strong>Daftar Nilai:</strong><br>";
+                siswa.nilaiArr.forEach((n, i) => {
+                    htmlNilai += `<div style="border-bottom: 1px solid #ddd; padding: 5px 0;">${i+1}. ${n.materi}: <b>${n.skor}</b></div>`;
+                });
+                document.getElementById('view-nilai-list').innerHTML = htmlNilai;
+                document.getElementById('modalSiswa').style.display = 'flex';
             } else {
-                alert("Data NISN " + decodedText + " tidak terdaftar!");
+                alert("NISN " + decodedText + " Tidak Ditemukan!");
             }
         }
 
-        function closeModal() { document.getElementById('resultModal').style.display = 'none'; }
+        function closeModal() { document.getElementById('modalSiswa').style.display = 'none'; }
 
-        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        html5QrcodeScanner.render(onScanSuccess);
+        // Inisialisasi Scanner
+        let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 200 });
+        scanner.render(onScanSuccess);
     </script>
 </body>
 </html>
