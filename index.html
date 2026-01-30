@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner NISN - Dashboard</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; }
+        #reader { width: 100%; max-width: 500px; margin: auto; background: white; padding: 10px; border-radius: 8px; }
+        .result-card { margin-top: 20px; padding: 20px; background: white; display: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: left; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .nav { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="nav">
+        <strong>DASHBOARD SCANNER</strong> | <a href="data.html">Pengolahan Data</a>
+    </div>
+
+    <div id="reader"></div>
+
+    <div id="result" class="result-card">
+        <h3>Data Siswa Found:</h3>
+        <p><strong>NISN:</strong> <span id="res-nisn"></span></p>
+        <p><strong>Nama:</strong> <span id="res-nama"></span></p>
+        <p><strong>Kelas:</strong> <span id="res-kelas"></span></p>
+        <p><strong>Mapel:</strong> <span id="res-mapel"></span></p>
+        <p><strong>Nilai:</strong> <span id="res-nilai"></span></p>
+    </div>
+
+    <script>
+        function onScanSuccess(decodedText, decodedResult) {
+            // Ambil data dari LocalStorage
+            const storedData = JSON.parse(localStorage.getItem('dataSiswa')) || [];
+            const siswa = storedData.find(s => s.nisn === decodedText);
+
+            if (siswa) {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('res-nisn').innerText = siswa.nisn;
+                document.getElementById('res-nama').innerText = siswa.nama;
+                document.getElementById('res-kelas').innerText = siswa.kelas;
+                document.getElementById('res-mapel').innerText = siswa.mapel;
+                document.getElementById('res-nilai').innerText = siswa.nilai;
+                
+                // Berhenti scan sebentar agar tidak terus menerus terbaca
+                alert("Data Ditemukan!");
+            } else {
+                alert("Barcode: " + decodedText + " - Data NISN tidak ditemukan di database.");
+            }
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>

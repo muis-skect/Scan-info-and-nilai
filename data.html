@@ -1,0 +1,103 @@
+<div style="margin-top: 20px; display: flex; gap: 10px;">
+    <button onclick="eksporData()" style="background: #007bff;">Ekspor ke Excel (CSV)</button>
+    <button onclick="backupJSON()" style="background: #6c757d;">Backup Data (JSON)</button>
+    <input type="file" id="importFile" style="display:none" accept=".json" onchange="imporJSON(event)">
+    <button onclick="document.getElementById('importFile').click()" style="background: #ffc107; color: black;">Impor Data (JSON)</button>
+</div>
+
+<script>
+    const form = document.getElementById('dataForm');
+    const tableBody = document.querySelector('#dataTable tbody');
+
+    function loadData() {
+        const data = JSON.parse(localStorage.getItem('dataSiswa')) || [];
+        tableBody.innerHTML = '';
+        data.forEach((s, index) => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${s.nisn}</td>
+                    <td>${s.nama}</td>
+                    <td>${s.kelas}</td>
+                    <td>${s.mapel}</td>
+                    <td>${s.nilai}</td>
+                    <td><button onclick="hapus(${index})" style="background:red; padding: 5px;">Hapus</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    // Fungsi Simpan (Sudah ada sebelumnya)
+    form.onsubmit = (e) => {
+        e.preventDefault();
+        const data = JSON.parse(localStorage.getItem('dataSiswa')) || [];
+        data.push({
+            nisn: document.getElementById('nisn').value,
+            nama: document.getElementById('nama').value,
+            kelas: document.getElementById('kelas').value,
+            mapel: document.getElementById('mapel').value,
+            nilai: document.getElementById('nilai').value
+        });
+        localStorage.setItem('dataSiswa', JSON.stringify(data));
+        form.reset();
+        loadData();
+    };
+
+    function hapus(index) {
+        if(confirm("Hapus data ini?")) {
+            const data = JSON.parse(localStorage.getItem('dataSiswa'));
+            data.splice(index, 1);
+            localStorage.setItem('dataSiswa', JSON.stringify(data));
+            loadData();
+        }
+    }
+
+    // --- FITUR EKSPOR KE CSV (EXCEL) ---
+    function eksporData() {
+        const data = JSON.parse(localStorage.getItem('dataSiswa')) || [];
+        if (data.length === 0) return alert("Data kosong!");
+
+        let csvContent = "data:text/csv;charset=utf-8,NISN,Nama,Kelas,Mapel,Nilai\n";
+        data.forEach(s => {
+            csvContent += `${s.nisn},${s.nama},${s.kelas},${s.mapel},${s.nilai}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "data_siswa.csv");
+        document.body.appendChild(link);
+        link.click();
+    }
+
+    // --- FITUR BACKUP JSON ---
+    function backupJSON() {
+        const data = localStorage.getItem('dataSiswa');
+        const blob = new Blob([data], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'backup_siswa.json';
+        a.click();
+    }
+
+    // --- FITUR IMPOR JSON ---
+    function imporJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                localStorage.setItem('dataSiswa', JSON.stringify(importedData));
+                loadData();
+                alert("Data berhasil diimpor!");
+            } catch (err) {
+                alert("File tidak valid!");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    loadData();
+</script>
