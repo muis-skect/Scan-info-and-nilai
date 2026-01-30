@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Admin - Cek Nilai</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 30px; }
+        .admin-panel { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #4a76c5; border-bottom: 3px solid #4a76c5; display: inline-block; }
+        .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        input, textarea { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        textarea { grid-column: span 2; }
+        .btn-group { margin-top: 20px; display: flex; gap: 10px; }
+        button { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-save { background: #28a745; }
+        .btn-export { background: #007bff; }
+        .btn-import { background: #ffc107; color: black; }
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-panel">
+        <h2>PENGOLAHAN DATA SISWA</h2>
+        
+        <form id="formAdmin">
+            <div class="form-group">
+                <input type="text" id="nisn" placeholder="Nomor NISN (Barcode)" required>
+                <input type="text" id="nama" placeholder="Nama Lengkap Siswa" required>
+                <input type="text" id="kelas" placeholder="Kelas" required>
+                <textarea id="materiNilai" placeholder="Input Nilai Materi. Contoh: Matematika:80, Fisika:75, Biologi:90" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn-save">SIMPAN DATA</button>
+        </form>
+
+        <div class="btn-group">
+            <button onclick="eksporData()" class="btn-export">BACKUP DATA (JSON)</button>
+            <button onclick="document.getElementById('fileInput').click()" class="btn-import">IMPOR DATA</button>
+            <input type="file" id="fileInput" style="display:none" onchange="imporData(event)">
+        </div>
+
+        <table id="tabelSiswa">
+            <thead>
+                <tr>
+                    <th>NISN</th>
+                    <th>Nama</th>
+                    <th>Kelas</th>
+                    <th>Materi</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const form = document.getElementById('formAdmin');
+        
+        function updateTabel() {
+            const data = JSON.parse(localStorage.getItem('db_siswa')) || [];
+            const tbody = document.querySelector('#tabelSiswa tbody');
+            tbody.innerHTML = '';
+            
+            data.forEach((s, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>${s.nisn}</b></td>
+                        <td>${s.nama}</td>
+                        <td>${s.kelas}</td>
+                        <td>${s.nilaiArr.length} Item</td>
+                        <td><button onclick="hapusSiswa(${index})" style="background:#dc3545; padding:5px 10px; font-size:12px">Hapus</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const rawNilai = document.getElementById('materiNilai').value;
+            // Mengubah teks materi menjadi array objek
+            const arrayNilai = rawNilai.split(',').map(item => {
+                const p = item.split(':');
+                return { materi: p[0].trim(), skor: p[1] ? p[1].trim() : '0' };
+            });
+
+            const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
+            db.push({
+                nisn: document.getElementById('nisn').value,
+                nama: document.getElementById('nama').value,
+                kelas: document.getElementById('kelas').value,
+                nilaiArr: arrayNilai
+            });
+
+            localStorage.setItem('db_siswa', JSON.stringify(db));
+            form.reset();
+            updateTabel();
+            alert("Data Berhasil Disimpan!");
+        };
+
+        function hapusSiswa(idx) {
+            if(confirm("Hapus data ini?")) {
+                const db = JSON.parse(localStorage.getItem('db_siswa'));
+                db.splice(idx, 1);
+                localStorage.setItem('db_siswa', JSON.stringify(db));
+                updateTabel();
+            }
+        }
+
+        function eksporData() {
+            const data = localStorage.getItem('db_siswa');
+            const blob = new Blob([data], {type: "application/json"});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'backup_siswa.json';
+            a.click();
+        }
+
+        function imporData(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                localStorage.setItem('db_siswa', event.target.result);
+                updateTabel();
+                alert("Impor Selesai!");
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+
+        updateTabel();
+    </script>
+</body>
+</html>
