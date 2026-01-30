@@ -12,18 +12,24 @@
         .login-box input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .btn-login { background: var(--primary-blue); color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        #adminPanel { display: none; width: 95%; max-width: 1000px; background: white; padding: 25px; border-radius: 15px; margin: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        input[type="text"], textarea { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+        #adminPanel { display: none; width: 95%; max-width: 900px; background: white; padding: 25px; border-radius: 15px; margin: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        input[type="text"], textarea { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
         textarea { grid-column: span 2; }
+        
         .btn-group { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; }
-        button { padding: 10px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
+        button { padding: 10px 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
+        
         .btn-save { background: #28a745; width: 100%; margin-top: 10px; }
         .btn-excel { background: #1d6f42; }
+        .btn-template { background: #6c757d; }
         .btn-logout { background: #dc3545; float: right; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #f8f9fa; }
+        .badge-nilai { font-size: 11px; background: #eee; padding: 2px 6px; border-radius: 4px; margin-right: 3px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -36,30 +42,34 @@
     </div>
 
     <div id="adminPanel">
-        <button class="btn-logout" onclick="logout()">LOGOUT</button>
+        <button class="btn-logout" onclick="location.reload()">LOGOUT</button>
         <h2 style="color: var(--primary-blue); margin-top: 0;">PENGOLAHAN DATA SISWA</h2>
         
         <form id="formAdmin">
-            <div class="form-group">
-                <input type="text" id="nisn" placeholder="NISN (Barcode)" required>
-                <input type="text" id="nama" placeholder="Nama Lengkap Siswa" required>
+            <div class="form-grid">
+                <input type="text" id="nisn" placeholder="NISN (Untuk Barcode)" required>
+                <input type="text" id="nama" placeholder="Nama Siswa" required>
                 <input type="text" id="kelas" placeholder="Kelas" required>
                 
-                <div style="grid-column: span 2; background: #fefefe; padding: 15px; border: 1px dashed #aaa; border-radius: 10px;">
+                <div style="grid-column: span 2; background: #f9f9f9; padding: 15px; border: 1px dashed #aaa; border-radius: 10px;">
                     <label style="font-size: 11px; font-weight: bold;">INPUT NILAI CEPAT:</label>
-                    <input type="text" id="templateMateri" placeholder="Daftar Mapel (Contoh: MTK, IPA, B.Indo)" style="width:70%; margin-bottom:10px;">
-                    <button type="button" onclick="generateTemplate()" style="background:#6c757d; font-size:10px;">Buat Template</button>
-                    <textarea id="materiNilai" placeholder="Format: MTK:80, IPA:90" rows="3" required></textarea>
+                    <div style="display: flex; gap: 5px; margin: 5px 0;">
+                        <input type="text" id="tempMapel" placeholder="MTK, IPA, B.Indo" style="flex: 1;">
+                        <button type="button" onclick="buatTemplate()" style="background:#6c757d; font-size:10px; white-space: nowrap;">Buat Format</button>
+                    </div>
+                    <textarea id="materiNilai" placeholder="Hasil: MTK:0, IPA:0" rows="2"></textarea>
                 </div>
             </div>
-            <button type="submit" class="btn-save">SIMPAN DATA KE DATABASE</button>
+            <button type="submit" class="btn-save">SIMPAN KE DATABASE</button>
         </form>
 
         <div class="btn-group">
+            <button onclick="downloadTemplate()" class="btn-template">1. DOWNLOAD TEMPLATE EXCEL</button>
+            
             <input type="file" id="excelInput" style="display:none" accept=".xlsx, .xls" onchange="imporExcel(event)">
-            <button onclick="document.getElementById('excelInput').click()" class="btn-excel">IMPORT DARI EXCEL (.xlsx)</button>
-            <button onclick="eksporJSON()" style="background:#007bff">BACKUP DATA (JSON)</button>
-            <button onclick="resetData()" style="background:orange">HAPUS SEMUA DATA</button>
+            <button onclick="document.getElementById('excelInput').click()" class="btn-excel">2. IMPORT DARI EXCEL</button>
+            
+            <button onclick="localStorage.removeItem('db_siswa'); updateTabel();" style="background:orange">RESET SEMUA DATA</button>
         </div>
 
         <table id="tabelSiswa">
@@ -68,7 +78,7 @@
                     <th>NISN</th>
                     <th>Nama</th>
                     <th>Kelas</th>
-                    <th>Materi</th>
+                    <th>Materi & Nilai</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -77,25 +87,30 @@
     </div>
 
     <script>
-        const VALID_USER = "guruupdate";
-        const VALID_PASS = "muis1234";
+        const U = "guruupdate", P = "muis1234";
 
         function cekLogin() {
-            if(document.getElementById('userIn').value === VALID_USER && document.getElementById('passIn').value === VALID_PASS) {
+            if(document.getElementById('userIn').value === U && document.getElementById('passIn').value === P) {
                 document.getElementById('loginArea').style.display = 'none';
                 document.getElementById('adminPanel').style.display = 'block';
-                document.body.style.alignItems = 'flex-start';
                 updateTabel();
-            } else { alert("Login Gagal!"); }
+            } else { alert("Username atau Password Salah!"); }
         }
 
-        function logout() { location.reload(); }
+        // --- FITUR DOWNLOAD TEMPLATE ---
+        function downloadTemplate() {
+            const header = [["NISN", "Nama", "Kelas", "Nilai"]];
+            const contohData = [["123456", "Nama Siswa Contoh", "XI-IPA-1", "Matematika:85, Fisika:80"]];
+            const ws = XLSX.utils.aoa_to_sheet(header.concat(contohData));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template");
+            XLSX.writeFile(wb, "Template_Import_Siswa.xlsx");
+        }
 
-        function generateTemplate() {
-            const val = document.getElementById('templateMateri').value;
-            if(!val) return alert("Isi daftar mapel!");
-            const temp = val.split(',').map(m => `${m.trim()}:0`).join(', ');
-            document.getElementById('materiNilai').value = temp;
+        function buatTemplate() {
+            const m = document.getElementById('tempMapel').value;
+            if(!m) return alert("Isi daftar mapel!");
+            document.getElementById('materiNilai').value = m.split(',').map(x => `${x.trim()}:0`).join(', ');
         }
 
         function updateTabel() {
@@ -103,75 +118,74 @@
             const tbody = document.querySelector('#tabelSiswa tbody');
             tbody.innerHTML = '';
             data.forEach((s, i) => {
-                tbody.innerHTML += `<tr><td>${s.nisn}</td><td>${s.nama}</td><td>${s.kelas}</td><td>${s.nilaiArr.length} Mapel</td><td><button onclick="hapusSiswa(${i})" style="background:#dc3545; padding:5px 10px; font-size:10px">Hapus</button></td></tr>`;
+                let listNilai = s.nilaiArr.map(n => `<span class="badge-nilai">${n.materi}:${n.skor}</span>`).join('');
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>${s.nisn}</b></td>
+                        <td>${s.nama}</td>
+                        <td>${s.kelas}</td>
+                        <td>${listNilai}</td>
+                        <td><button onclick="hapus(${i})" style="background:red; padding:5px 10px; font-size:10px">Hapus</button></td>
+                    </tr>`;
             });
         }
 
         document.getElementById('formAdmin').onsubmit = (e) => {
             e.preventDefault();
             const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
-            const arrayNilai = document.getElementById('materiNilai').value.split(',').map(item => {
-                const p = item.split(':');
-                return { materi: p[0].trim(), skor: p[1] ? p[1].trim() : '0' };
+            const nArr = document.getElementById('materiNilai').value.split(',').map(x => {
+                const p = x.split(':'); 
+                return { materi: p[0]?.trim() || 'Mapel', skor: p[1]?.trim() || '0' };
             });
             db.push({
                 nisn: document.getElementById('nisn').value,
                 nama: document.getElementById('nama').value,
                 kelas: document.getElementById('kelas').value,
-                nilaiArr: arrayNilai
+                nilaiArr: nArr
             });
             localStorage.setItem('db_siswa', JSON.stringify(db));
             updateTabel();
             document.getElementById('nisn').value = "";
             document.getElementById('nama').value = "";
-            alert("Data Berhasil Disimpan!");
         };
 
         function imporExcel(e) {
-            const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onload = (event) => {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(sheet);
-                const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
-                jsonData.forEach(row => {
-                    const rawNilai = row.Nilai || row.NILAI || "";
-                    const arrayNilai = rawNilai.toString().split(',').map(item => {
-                        const p = item.split(':');
-                        return { materi: p[0].trim(), skor: p[1] ? p[1].trim() : '0' };
+            reader.onload = (ev) => {
+                try {
+                    const data = new Uint8Array(ev.target.result);
+                    const wb = XLSX.read(data, {type: 'array'});
+                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                    const db = JSON.parse(localStorage.getItem('db_siswa')) || [];
+                    
+                    json.forEach(row => {
+                        const rawNilai = row.Nilai || row.NILAI || "";
+                        const nArr = rawNilai.toString().split(',').map(x => {
+                            const p = x.split(':');
+                            return { materi: p[0]?.trim() || 'Mapel', skor: p[1]?.trim() || '0' };
+                        });
+                        db.push({
+                            nisn: row.NISN.toString(),
+                            nama: row.Nama || row.NAMA,
+                            kelas: row.Kelas || row.KELAS,
+                            nilaiArr: nArr
+                        });
                     });
-                    db.push({ nisn: row.NISN.toString(), nama: row.Nama || row.NAMA, kelas: row.Kelas || row.KELAS, nilaiArr: arrayNilai });
-                });
-                localStorage.setItem('db_siswa', JSON.stringify(db));
-                updateTabel();
-                alert("Berhasil mengimpor " + jsonData.length + " data!");
+                    localStorage.setItem('db_siswa', JSON.stringify(db));
+                    updateTabel();
+                    alert("Berhasil mengimpor " + json.length + " data!");
+                } catch(err) {
+                    alert("Gagal membaca file Excel. Pastikan format benar.");
+                }
             };
-            reader.readAsArrayBuffer(file);
+            reader.readAsArrayBuffer(e.target.files[0]);
         }
 
-        function hapusSiswa(i) {
-            if(confirm("Hapus siswa ini?")) {
+        function hapus(i) {
+            if(confirm("Hapus data ini?")) {
                 const db = JSON.parse(localStorage.getItem('db_siswa'));
                 db.splice(i, 1);
                 localStorage.setItem('db_siswa', JSON.stringify(db));
-                updateTabel();
-            }
-        }
-
-        function eksporJSON() {
-            const data = localStorage.getItem('db_siswa');
-            const blob = new Blob([data], {type: "application/json"});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'backup_data_siswa.json';
-            a.click();
-        }
-
-        function resetData() {
-            if(confirm("PERINGATAN: Semua data akan dihapus permanen!")) {
-                localStorage.removeItem('db_siswa');
                 updateTabel();
             }
         }
